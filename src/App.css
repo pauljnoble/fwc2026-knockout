@@ -39,6 +39,19 @@
   color: #444;
 }
 
+.app-sidebar__footer {
+  margin: auto 0 0;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 13px;
+  line-height: 1.3;
+  color: #444;
+}
+
 .app-sidebar__actions {
   display: flex;
   gap: 0.5rem;

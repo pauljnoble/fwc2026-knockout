@@ -231,9 +231,6 @@ function App() {
           </a>
           .
         </p>
-        <p className="app-sidebar__text">
-          <a href="https://x.com/paul__ux">@paul__ux</a>
-        </p>
 
         <div className="app-sidebar__actions">
           <button
@@ -301,6 +298,11 @@ function App() {
             ) : null}
           </section>
         )}
+        <p className="app-sidebar__footer" style={{ opacity: 0.66 }}>
+          <a href="https://x.com/paul__ux" style={{ textDecoration: "none" }}>
+            @paul__ux
+          </a>
+        </p>
       </aside>
       <div className="app-main">
         {isLoadingShare ? (

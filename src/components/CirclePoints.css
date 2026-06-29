@@ -2,7 +2,7 @@
   --connector-color: #c8c8c8;
   --flag-size: 52px;
   position: relative;
-  width: min(calc(100% - 64px), min(calc(100vh - 120px), 1100px));
+  width: min(calc(100% - 64px), min(calc(100vh - 160px), 1000px));
   aspect-ratio: 1;
   margin: 0 auto;
 }
@@ -166,8 +166,11 @@
   mix-blend-mode: normal;
 }
 
-.circle-points__ring--first .circle-points__flag-tooltip .circle-points__flag {
-  position: static;
+.circle-points__ring--first
+  .circle-points__flag-tooltip
+  .circle-points__flag-stack
+  .circle-points__flag {
+  position: absolute;
   transform: none;
 }
 
@@ -215,9 +218,11 @@ button.circle-points__point {
   background: var(--connector-color);
 }
 
-.circle-points__point--eliminated .circle-points__flag {
-  filter: sepia(1) saturate(0.7);
-  opacity: 0.4;
+.circle-points__flag-stack {
+  position: relative;
+  display: block;
+  width: var(--flag-size);
+  height: var(--flag-size);
 }
 
 .circle-points__flag {
@@ -226,7 +231,29 @@ button.circle-points__point {
   object-fit: cover;
   border-radius: 50%;
   display: block;
+}
+
+.circle-points__flag-stack .circle-points__flag {
+  position: absolute;
+  inset: 0;
+  transition: opacity 0.4s ease;
+}
+
+.circle-points__flag--active {
   opacity: 1;
+}
+
+.circle-points__flag--inactive {
+  filter: sepia(1) saturate(0.7);
+  opacity: 0;
+}
+
+.circle-points__flag-stack--inactive .circle-points__flag--active {
+  opacity: 0;
+}
+
+.circle-points__flag-stack--inactive .circle-points__flag--inactive {
+  opacity: 0.4;
 }
 
 .circle-points__flag-tooltip {

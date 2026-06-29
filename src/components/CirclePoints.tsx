@@ -154,14 +154,14 @@ function getTooltipSide(pointX: number): "left" | "right" {
 type FlagWithTooltipProps = {
   team: Team;
   side: "left" | "right";
-  className?: string;
+  inactive?: boolean;
   beatBy?: Team | null;
 };
 
 function FlagWithTooltip({
   team,
   side,
-  className,
+  inactive = false,
   beatBy,
 }: FlagWithTooltipProps) {
   const tooltipText = beatBy
@@ -172,7 +172,18 @@ function FlagWithTooltip({
     <span
       className={`circle-points__flag-tooltip circle-points__flag-tooltip--${side}`}
     >
-      <TeamFlag team={team} className={className} />
+      <span
+        className={`circle-points__flag-stack${inactive ? " circle-points__flag-stack--inactive" : ""}`}
+      >
+        <TeamFlag
+          team={team}
+          className="circle-points__flag circle-points__flag--active"
+        />
+        <TeamFlag
+          team={team}
+          className="circle-points__flag circle-points__flag--inactive"
+        />
+      </span>
       <span className="circle-points__tooltip">{tooltipText}</span>
     </span>
   );
@@ -449,7 +460,6 @@ export function CirclePoints({
       isFirstRing ? "circle-points__point--first-slot" : "",
       !isFirstRing && showTeamDot ? "circle-points__point--team" : "",
       isSelectable ? "circle-points__point--selectable" : "",
-      teamState === "eliminated" ? "circle-points__point--eliminated" : "",
       isDotPassed ? "circle-points__point--passed" : "",
     ]
       .filter(Boolean)
@@ -468,7 +478,7 @@ export function CirclePoints({
       <FlagWithTooltip
         team={actualTeam}
         side={tooltipSide}
-        className="circle-points__flag"
+        inactive={teamState === "eliminated"}
         beatBy={beatBy}
       />
     ) : null;
