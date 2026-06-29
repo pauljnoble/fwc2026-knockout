@@ -1,6 +1,32 @@
 import type { VercelRequest, VercelResponse } from '@vercel/node';
-import { get } from '@vercel/blob';
-import { isShareId } from '../src/lib/shareId';
+
+const SHARE_ID_PATTERN = /^[A-Za-z0-9_-]{10}$/;
+
+function isShareId(id: string): boolean {
+  return SHARE_ID_PATTERN.test(id);
+}
+
+function getBlobStoreId(): string | null {
+  if (process.env.BLOB_STORE_ID) {
+    return process.env.BLOB_STORE_ID;
+  }
+
+  const token = process.env.BLOB_READ_WRITE_TOKEN;
+  if (!token) {
+    return null;
+  }
+
+  return token.split('_')[3] ?? null;
+}
+
+function getPublicBlobUrl(pathname: string): string | null {
+  const storeId = getBlobStoreId();
+  if (!storeId) {
+    return null;
+  }
+
+  return `https://${storeId}.public.blob.vercel-storage.com/${pathname}`;
+}
 
 export default async function handler(
   request: VercelRequest,
@@ -15,13 +41,21 @@ export default async function handler(
     return response.status(400).json({ error: 'Invalid share id' });
   }
 
+  const url = getPublicBlobUrl(`${id}.json`);
+  if (!url) {
+    return response.status(500).json({ error: 'Blob storage is not configured' });
+  }
+
   try {
-    const result = await get(`${id}.json`, { access: 'public' });
-    if (!result) {
+    const blobResponse = await fetch(url);
+    if (blobResponse.status === 404) {
       return response.status(404).json({ error: 'Shared draw not found' });
     }
+    if (!blobResponse.ok) {
+      throw new Error(`Failed to load shared draw (${blobResponse.status})`);
+    }
 
-    const json = await new Response(result.stream).text();
+    const json = await blobResponse.text();
     return response
       .status(200)
       .setHeader('Content-Type', 'application/json')
