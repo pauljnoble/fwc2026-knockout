@@ -1,7 +1,11 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { CirclePoints, type DrawPosition } from "./components/CirclePoints";
 import { parseDrawState, serializeDrawState } from "./lib/drawState";
-import { uploadDrawState } from "./lib/shareDraw";
+import {
+  getShareIdFromUrl,
+  loadDrawState,
+  uploadDrawState,
+} from "./lib/shareDraw";
 import { DEFAULT_DRAW_STATE } from "./lib/default-state";
 import type { Team } from "./lib/drawTree";
 import "./App.css";
@@ -71,7 +75,10 @@ function isDebugEnabled(): boolean {
 
 function App() {
   const showDebugPanel = isDebugEnabled();
-  const [pairWinners, setPairWinners] = useState(getInitialPairWinners);
+  const shareId = getShareIdFromUrl();
+  const [pairWinners, setPairWinners] = useState(() =>
+    shareId ? {} : getInitialPairWinners(),
+  );
   const [drawKey, setDrawKey] = useState(0);
   const [debugDraft, setDebugDraft] = useState("");
   const [debugMessage, setDebugMessage] = useState<string | null>(null);
@@ -79,8 +86,54 @@ function App() {
   const [shareLink, setShareLink] = useState<string | null>(null);
   const [shareError, setShareError] = useState<string | null>(null);
   const [isSharing, setIsSharing] = useState(false);
+  const [isLoadingShare, setIsLoadingShare] = useState(Boolean(shareId));
+  const [shareLoadError, setShareLoadError] = useState<string | null>(null);
+  const [shareCopied, setShareCopied] = useState(false);
 
   const hasChanges = Object.keys(pairWinners).length > 0;
+
+  useEffect(() => {
+    if (!shareId) {
+      return;
+    }
+
+    let cancelled = false;
+
+    void (async () => {
+      try {
+        const json = await loadDrawState(shareId);
+        const result = parseDrawState(json, DRAW_POSITIONS);
+
+        if (cancelled) {
+          return;
+        }
+
+        if ("error" in result) {
+          setShareLoadError(result.error);
+          return;
+        }
+
+        setPairWinners(result.pairWinners);
+        setDrawKey((current) => current + 1);
+      } catch (error) {
+        if (!cancelled) {
+          setShareLoadError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load shared draw.",
+          );
+        }
+      } finally {
+        if (!cancelled) {
+          setIsLoadingShare(false);
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [shareId]);
 
   const handleCopyState = useCallback(async () => {
     const serialized = serializeDrawState(pairWinners);
@@ -125,6 +178,7 @@ function App() {
     setShowShareModal(true);
     setShareLink(null);
     setShareError(null);
+    setShareCopied(false);
     setIsSharing(true);
 
     try {
@@ -146,22 +200,36 @@ function App() {
     setShowShareModal(false);
     setShareLink(null);
     setShareError(null);
+    setShareCopied(false);
   }, []);
+
+  const handleCopyShareLink = useCallback(async () => {
+    if (!shareLink) {
+      return;
+    }
+
+    try {
+      await navigator.clipboard.writeText(shareLink);
+      setShareCopied(true);
+    } catch {
+      setShareCopied(false);
+    }
+  }, [shareLink]);
 
   return (
     <main className="app">
       <aside className="app-sidebar">
         <h1 className="app-sidebar__title">World Cup 2026 Knockout Phase</h1>
         <p className="app-sidebar__text">
-          Interactive visualization based on the{" "}
+          Interactive visualization based on an{" "}
           <a
             target="_blank"
             href="https://x.com/mkobach/status/2071353471295430705"
             rel="noopener noreferrer"
           >
             original design
-          </a>{" "}
-          posted here.
+          </a>
+          .
         </p>
         <p className="app-sidebar__text">
           <a href="https://x.com/paul__ux">@paul__ux</a>
@@ -184,6 +252,19 @@ function App() {
             Reset
           </button>
         </div>
+
+        {isLoadingShare ? (
+          <p className="app-sidebar__share-message" role="status">
+            Loading shared draw…
+          </p>
+        ) : shareLoadError ? (
+          <p
+            className="app-sidebar__share-message app-sidebar__share-message--error"
+            role="alert"
+          >
+            {shareLoadError}
+          </p>
+        ) : null}
 
         {showDebugPanel && (
           <section className="app-sidebar__debug" aria-label="Debug panel">
@@ -222,12 +303,18 @@ function App() {
         )}
       </aside>
       <div className="app-main">
-        <CirclePoints
-          key={drawKey}
-          positions={DRAW_POSITIONS}
-          pairWinners={pairWinners}
-          onPairWinnersChange={setPairWinners}
-        />
+        {isLoadingShare ? (
+          <p className="app-main__loading" role="status">
+            Loading shared draw…
+          </p>
+        ) : (
+          <CirclePoints
+            key={drawKey}
+            positions={DRAW_POSITIONS}
+            pairWinners={pairWinners}
+            onPairWinnersChange={setPairWinners}
+          />
+        )}
       </div>
       {showShareModal ? (
         <div
@@ -254,7 +341,32 @@ function App() {
                 {shareError}
               </p>
             ) : shareLink ? (
-              <p className="app-share-modal__link">{shareLink}</p>
+              <div className="app-share-modal__link-block">
+                <div className="app-share-modal__link-row">
+                  <p className="app-share-modal__link" title={shareLink}>
+                    {shareLink}
+                  </p>
+                  <button
+                    type="button"
+                    className="app-share-modal__copy"
+                    aria-label="Copy share link"
+                    onClick={handleCopyShareLink}
+                  >
+                    <svg
+                      className="app-share-modal__copy-icon"
+                      viewBox="0 0 24 24"
+                      aria-hidden="true"
+                    >
+                      <path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48" />
+                    </svg>
+                  </button>
+                </div>
+                {shareCopied ? (
+                  <p className="app-share-modal__copied" role="status">
+                    Copied to clipboard
+                  </p>
+                ) : null}
+              </div>
             ) : null}
             <button
               type="button"
