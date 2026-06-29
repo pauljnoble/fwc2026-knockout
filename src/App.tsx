@@ -307,7 +307,7 @@ function App() {
       <div className="app-main">
         {isLoadingShare ? (
           <p className="app-main__loading" role="status">
-            Loading shared draw…
+            Loading shared draw
           </p>
         ) : (
           <CirclePoints

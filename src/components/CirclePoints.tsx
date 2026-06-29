@@ -1,10 +1,13 @@
 import {
   useCallback,
   useEffect,
+  useLayoutEffect,
   useMemo,
+  useRef,
   useState,
   type CSSProperties,
 } from "react";
+import { createPortal } from "react-dom";
 import { buildAdvancePath, type PathPoint } from "../lib/advancePaths";
 import {
   canSelectPair,
@@ -22,6 +25,7 @@ import {
   type PlayableRing,
   type Team,
 } from "../lib/drawTree";
+import { useHoverIntent } from "../hooks/useHoverIntent";
 import { TeamFlag } from "./TeamFlag";
 import { AdvanceAnimator } from "./TravelingTeam";
 import "./CirclePoints.css";
@@ -29,6 +33,7 @@ import "./CirclePoints.css";
 export type { DrawPosition } from "../lib/drawTree";
 
 const RING_RADII = [50, 40.5, 31, 22, 13.5, 5.5] as const;
+const OUTER_RING_DIAMETER_EXPANSION_PX = 8;
 
 type CirclePointsProps = {
   positions: DrawPosition[];
@@ -80,12 +85,19 @@ function computeRingOffsets() {
 
 const RING_OFFSETS = computeRingOffsets();
 
-function getRingRadius(ringIndex: number) {
-  return RING_RADII[ringIndex] ?? RING_RADII[RING_RADII.length - 1];
+function getRingRadius(ringIndex: number, expansionOffset = 0) {
+  return (
+    (RING_RADII[ringIndex] ?? RING_RADII[RING_RADII.length - 1]) +
+    expansionOffset
+  );
 }
 
-function getRingPoints(count: number, ringIndex: number): Point[] {
-  const radius = getRingRadius(ringIndex);
+function getRingPoints(
+  count: number,
+  ringIndex: number,
+  expansionOffset = 0,
+): Point[] {
+  const radius = getRingRadius(ringIndex, expansionOffset);
   const offset = RING_OFFSETS[ringIndex];
 
   return Array.from({ length: count }, (_, index) => {
@@ -99,11 +111,11 @@ function getRingPoints(count: number, ringIndex: number): Point[] {
   });
 }
 
-function buildRings() {
+function buildRings(expansionOffset = 0) {
   return RING_COUNTS.map((count, ringIndex) => ({
     count,
     ringIndex,
-    points: getRingPoints(count, ringIndex),
+    points: getRingPoints(count, ringIndex, expansionOffset),
   }));
 }
 
@@ -164,34 +176,136 @@ function FlagWithTooltip({
   inactive = false,
   beatBy,
 }: FlagWithTooltipProps) {
+  const anchorRef = useRef<HTMLSpanElement>(null);
+  const [focusedVisible, setFocusedVisible] = useState(false);
+  const [isPositioned, setIsPositioned] = useState(false);
+  const [tooltipStyle, setTooltipStyle] = useState<CSSProperties>({});
+  const {
+    active: hoverVisible,
+    onMouseEnter,
+    onMouseLeave,
+    showImmediately,
+    hideImmediately,
+  } = useHoverIntent();
   const tooltipText = beatBy
     ? `${team.name} — lost to ${beatBy.name}`
     : team.name;
+  const visible = hoverVisible || focusedVisible;
+
+  const updateTooltipPosition = useCallback(() => {
+    const anchor = anchorRef.current;
+    if (!anchor) {
+      return;
+    }
+
+    const rect = anchor.getBoundingClientRect();
+    const gap = 8;
+
+    if (side === "right") {
+      setTooltipStyle({
+        top: rect.top + rect.height / 2,
+        left: rect.right + gap,
+        transform: "translateY(-50%)",
+      });
+      return;
+    }
+
+    setTooltipStyle({
+      top: rect.top + rect.height / 2,
+      left: rect.left - gap,
+      transform: "translate(-100%, -50%)",
+    });
+  }, [side]);
+
+  useLayoutEffect(() => {
+    if (!visible) {
+      setIsPositioned(false);
+      return;
+    }
+
+    updateTooltipPosition();
+    setIsPositioned(true);
+
+    window.addEventListener("scroll", updateTooltipPosition, true);
+    window.addEventListener("resize", updateTooltipPosition);
+
+    return () => {
+      window.removeEventListener("scroll", updateTooltipPosition, true);
+      window.removeEventListener("resize", updateTooltipPosition);
+    };
+  }, [visible, updateTooltipPosition]);
+
+  useEffect(() => {
+    const button = anchorRef.current?.closest("button");
+    if (!button) {
+      return;
+    }
+
+    const handleFocusIn = () => {
+      if (button.matches(":focus-visible")) {
+        showImmediately();
+        setFocusedVisible(true);
+      }
+    };
+
+    const handleFocusOut = () => {
+      hideImmediately();
+      setFocusedVisible(false);
+    };
+
+    button.addEventListener("focusin", handleFocusIn);
+    button.addEventListener("focusout", handleFocusOut);
+
+    return () => {
+      button.removeEventListener("focusin", handleFocusIn);
+      button.removeEventListener("focusout", handleFocusOut);
+    };
+  }, [hideImmediately, showImmediately]);
 
   return (
-    <span
-      className={`circle-points__flag-tooltip circle-points__flag-tooltip--${side}`}
-    >
+    <>
       <span
-        className={`circle-points__flag-stack${inactive ? " circle-points__flag-stack--inactive" : ""}`}
+        ref={anchorRef}
+        className={`circle-points__flag-tooltip circle-points__flag-tooltip--${side}`}
+        onMouseEnter={onMouseEnter}
+        onMouseLeave={onMouseLeave}
       >
-        <TeamFlag
-          team={team}
-          className="circle-points__flag circle-points__flag--active"
-        />
-        <TeamFlag
-          team={team}
-          className="circle-points__flag circle-points__flag--inactive"
-        />
+        <span
+          className={`circle-points__flag-stack${inactive ? " circle-points__flag-stack--inactive" : ""}`}
+        >
+          <TeamFlag
+            team={team}
+            className="circle-points__flag circle-points__flag--active"
+          />
+          <TeamFlag
+            team={team}
+            className="circle-points__flag circle-points__flag--inactive"
+          />
+        </span>
       </span>
-      <span className="circle-points__tooltip">{tooltipText}</span>
-    </span>
+      {visible
+        ? createPortal(
+            <span
+              className={`circle-points__tooltip${isPositioned ? " circle-points__tooltip--visible" : ""} circle-points__tooltip--${side}`}
+              style={tooltipStyle}
+              role="tooltip"
+            >
+              {tooltipText}
+            </span>,
+            document.body,
+          )
+        : null}
+    </>
   );
 }
 
-function getPairArcMidpoint(pairIndex: number, ringIndex: number) {
+function getPairArcMidpoint(
+  pairIndex: number,
+  ringIndex: number,
+  expansionOffset = 0,
+) {
   const count = RING_COUNTS[ringIndex];
-  const radius = getRingRadius(ringIndex);
+  const radius = getRingRadius(ringIndex, expansionOffset);
   const offset = RING_OFFSETS[ringIndex];
   const step = (2 * Math.PI) / count;
   const angle = (pairIndex * 2 + 0.5) * step + offset;
@@ -207,6 +321,8 @@ export function CirclePoints({
   pairWinners,
   onPairWinnersChange,
 }: CirclePointsProps) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [ringRadiusOffset, setRingRadiusOffset] = useState(0);
   const [advancingTeams, setAdvancingTeams] = useState<AdvancingTeam[]>([]);
   const [travelPositions, setTravelPositions] = useState<
     Record<string, PathPoint>
@@ -236,10 +352,31 @@ export function CirclePoints({
 
     return blocked;
   }, [pendingSlots, advancingFromSlots]);
-  const rings = useMemo(() => buildRings(), []);
+  useLayoutEffect(() => {
+    const container = containerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const updateOffset = () => {
+      const width = container.getBoundingClientRect().width;
+      if (width <= 0) {
+        return;
+      }
+
+      setRingRadiusOffset((OUTER_RING_DIAMETER_EXPANSION_PX / 2 / width) * 100);
+    };
+
+    updateOffset();
+    const observer = new ResizeObserver(updateOffset);
+    observer.observe(container);
+    return () => observer.disconnect();
+  }, []);
+
+  const rings = useMemo(() => buildRings(ringRadiusOffset), [ringRadiusOffset]);
   const ringGeometry = useMemo(
-    () => buildRings().map((ring) => ring.points),
-    [],
+    () => buildRings(ringRadiusOffset).map((ring) => ring.points),
+    [ringRadiusOffset],
   );
   const pendingTargetPoints = useMemo(
     () =>
@@ -282,10 +419,10 @@ export function CirclePoints({
   const fourthRing = rings[3].points;
   const fifthRing = rings[4].points;
   const sixthRing = rings[5].points;
-  const secondRingRadius = getRingRadius(1);
-  const thirdRingRadius = getRingRadius(2);
-  const fourthRingRadius = getRingRadius(3);
-  const fifthRingRadius = getRingRadius(4);
+  const secondRingRadius = getRingRadius(1, ringRadiusOffset);
+  const thirdRingRadius = getRingRadius(2, ringRadiusOffset);
+  const fourthRingRadius = getRingRadius(3, ringRadiusOffset);
+  const fifthRingRadius = getRingRadius(4, ringRadiusOffset);
   const pairCount = secondRing.length / 2;
   const thirdRingPairCount = thirdRing.length / 2;
   const fourthRingPairCount = fourthRing.length / 2;
@@ -382,8 +519,9 @@ export function CirclePoints({
       ringIndex,
       winnerSlotIndex: slotIndex,
       ringPoints: ringGeometry,
-      getRingRadius,
-      getPairArcMidpoint,
+      getRingRadius: (ringIndex) => getRingRadius(ringIndex, ringRadiusOffset),
+      getPairArcMidpoint: (pairIndex, ringIndex) =>
+        getPairArcMidpoint(pairIndex, ringIndex, ringRadiusOffset),
     });
 
     if (!pathD) {
@@ -528,7 +666,7 @@ export function CirclePoints({
   }
 
   return (
-    <div className="circle-points">
+    <div className="circle-points" ref={containerRef}>
       <svg
         className="circle-points__connector"
         viewBox="0 0 100 100"
@@ -557,7 +695,7 @@ export function CirclePoints({
           );
         })}
         {Array.from({ length: pairCount }, (_, pairIndex) => {
-          const from = getPairArcMidpoint(pairIndex, 1);
+          const from = getPairArcMidpoint(pairIndex, 1, ringRadiusOffset);
           const to = thirdRing[pairIndex];
           return (
             <line
@@ -580,7 +718,7 @@ export function CirclePoints({
           );
         })}
         {Array.from({ length: thirdRingPairCount }, (_, pairIndex) => {
-          const from = getPairArcMidpoint(pairIndex, 2);
+          const from = getPairArcMidpoint(pairIndex, 2, ringRadiusOffset);
           const to = fourthRing[pairIndex];
           return (
             <line
@@ -603,7 +741,7 @@ export function CirclePoints({
           );
         })}
         {Array.from({ length: fourthRingPairCount }, (_, pairIndex) => {
-          const from = getPairArcMidpoint(pairIndex, 3);
+          const from = getPairArcMidpoint(pairIndex, 3, ringRadiusOffset);
           const to = fifthRing[pairIndex];
           return (
             <line
@@ -626,7 +764,7 @@ export function CirclePoints({
           );
         })}
         {Array.from({ length: fifthRingPairCount }, (_, pairIndex) => {
-          const from = getPairArcMidpoint(pairIndex, 4);
+          const from = getPairArcMidpoint(pairIndex, 4, ringRadiusOffset);
           const to = sixthRing[pairIndex];
           return (
             <line
@@ -640,7 +778,13 @@ export function CirclePoints({
         })}
       </svg>
       <div className="circle-points__trophy" aria-hidden="true">
-        <img src="/img/trophy-lm.png" alt="" />
+        <picture>
+          <source
+            srcSet="/img/trophy-dm.png"
+            media="(prefers-color-scheme: dark)"
+          />
+          <img src="/img/trophy-lm.png" alt="" />
+        </picture>
       </div>
       {rings.map((ring) => (
         <div key={ring.ringIndex} className={getRingClassName(ring.ringIndex)}>

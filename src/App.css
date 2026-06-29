@@ -36,7 +36,7 @@
     sans-serif;
   font-size: 14px;
   line-height: 1.3;
-  color: #444;
+  color: var(--text-secondary);
 }
 
 .app-sidebar__footer {
@@ -49,7 +49,7 @@
     sans-serif;
   font-size: 13px;
   line-height: 1.3;
-  color: #444;
+  color: var(--text-secondary);
 }
 
 .app-sidebar__actions {
@@ -69,19 +69,19 @@
     sans-serif;
   font-size: 0.875rem;
   line-height: 1.45;
-  color: #444;
+  color: var(--text-secondary);
 }
 
 .app-sidebar__share-message--error {
-  color: #b00020;
+  color: var(--error);
 }
 
 .app-action-btn {
   padding: 0.4375rem 0.75rem;
   border: none;
   border-radius: 0.25rem;
-  background: #222;
-  color: #fff;
+  background: var(--btn-bg);
+  color: var(--btn-text);
   font-family:
     system-ui,
     -apple-system,
@@ -95,12 +95,12 @@
 }
 
 .app-action-btn:hover:not(:disabled) {
-  background: #333;
+  background: var(--btn-bg-hover);
 }
 
 .app-action-btn:disabled {
-  background: #bbb;
-  color: #fff;
+  background: var(--btn-disabled-bg);
+  color: var(--btn-disabled-text);
   cursor: not-allowed;
 }
 
@@ -112,15 +112,15 @@
   align-items: center;
   justify-content: center;
   padding: 1.5rem;
-  background: rgb(0 0 0 / 0.35);
+  background: var(--modal-overlay);
 }
 
 .app-share-modal__panel {
   width: min(100%, 40rem);
   padding: 1.75rem 1.5rem;
   border-radius: 0.5rem;
-  background: #fff;
-  box-shadow: 0 12px 40px rgb(0 0 0 / 0.15);
+  background: var(--surface-elevated);
+  box-shadow: var(--modal-shadow);
 }
 
 .app-share-modal__title {
@@ -133,7 +133,7 @@
     sans-serif;
   font-size: 1rem;
   font-weight: 600;
-  color: #111;
+  color: var(--text);
 }
 
 .app-share-modal__link-block {
@@ -153,14 +153,14 @@
   margin: 0;
   padding: 0.625rem 0.75rem;
   border-radius: 0.25rem;
-  background: #f5f5f5;
+  background: var(--surface);
   overflow-x: auto;
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #333;
+  color: var(--text-secondary);
   white-space: nowrap;
 }
 
@@ -171,16 +171,16 @@
   justify-content: center;
   width: 2.375rem;
   padding: 0;
-  border: 1px solid #ddd;
+  border: 1px solid var(--border-subtle);
   border-radius: 0.25rem;
-  background: #fff;
-  color: #333;
+  background: var(--surface-elevated);
+  color: var(--text-secondary);
   cursor: pointer;
 }
 
 .app-share-modal__copy:hover {
-  background: #f5f5f5;
-  border-color: #ccc;
+  background: var(--surface);
+  border-color: var(--border);
 }
 
 .app-share-modal__copy-icon {
@@ -202,7 +202,7 @@
     "Segoe UI",
     sans-serif;
   font-size: 0.8125rem;
-  color: #2e7d32;
+  color: var(--success);
 }
 
 .app-share-modal__status,
@@ -219,15 +219,15 @@
 }
 
 .app-share-modal__error {
-  color: #b00020;
+  color: var(--error);
 }
 
 .app-sidebar__debug {
   margin-top: 2rem;
   padding: 0.875rem 1rem;
-  border: 1px dashed #bbb;
+  border: 1px dashed var(--border-strong);
   border-radius: 0.375rem;
-  background: rgb(255 255 255 / 0.45);
+  background: var(--surface-muted);
 }
 
 .app-sidebar__debug-title {
@@ -239,14 +239,14 @@
   font-weight: 600;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: #666;
+  color: var(--text-muted);
 }
 
 .app-sidebar__debug-help {
   margin: 0 0 0.75rem;
   font-size: 0.8125rem;
   line-height: 1.45;
-  color: #555;
+  color: var(--text-subtle);
 }
 
 .app-sidebar__debug-input {
@@ -255,20 +255,20 @@
   min-height: 10rem;
   margin: 0 0 0.75rem;
   padding: 0.625rem 0.75rem;
-  border: 1px solid #ccc;
+  border: 1px solid var(--border);
   border-radius: 0.25rem;
-  background: #fff;
+  background: var(--surface-elevated);
   font-family:
     ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono",
     "Courier New", monospace;
   font-size: 0.6875rem;
   line-height: 1.45;
-  color: #222;
+  color: var(--text);
   resize: vertical;
 }
 
 .app-sidebar__debug-input:focus {
-  outline: 2px solid #888;
+  outline: 2px solid var(--focus-outline);
   outline-offset: 1px;
 }
 
@@ -280,9 +280,10 @@
 
 .app-sidebar__debug-actions button {
   padding: 0.375rem 0.625rem;
-  border: 1px solid #aaa;
+  border: 1px solid var(--border-strong);
   border-radius: 0.25rem;
-  background: #f5f5f5;
+  background: var(--surface);
+  color: var(--text);
   font-family:
     system-ui,
     -apple-system,
@@ -294,14 +295,14 @@
 }
 
 .app-sidebar__debug-actions button:hover {
-  background: #ebebeb;
+  background: var(--border-subtle);
 }
 
 .app-sidebar__debug-message {
   margin: 0.625rem 0 0;
   font-size: 0.8125rem;
   line-height: 1.4;
-  color: #333;
+  color: var(--text-secondary);
 }
 
 .app-main {
@@ -322,7 +323,7 @@
     "Segoe UI",
     sans-serif;
   font-size: 0.9375rem;
-  color: #444;
+  color: var(--text-secondary);
 }
 
 @media (max-width: 1199px) {
