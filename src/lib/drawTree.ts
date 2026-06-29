@@ -177,9 +177,9 @@ export function canSelectPair(
 
   return Boolean(
     slotTeams[keyA] &&
-      slotTeams[keyB] &&
-      !blockedSlots.has(keyA) &&
-      !blockedSlots.has(keyB),
+    slotTeams[keyB] &&
+    !blockedSlots.has(keyA) &&
+    !blockedSlots.has(keyB),
   )
 }
 

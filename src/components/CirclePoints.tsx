@@ -145,10 +145,10 @@ function getTooltipSide(pointX: number): "left" | "right" {
   const onRightSide = pointX >= 50;
 
   if (onRightSide) {
-    return pointX > TOOLTIP_EDGE_THRESHOLD ? "left" : "right";
+    return pointX > TOOLTIP_EDGE_THRESHOLD ? "right" : "left";
   }
 
-  return pointX < 100 - TOOLTIP_EDGE_THRESHOLD ? "right" : "left";
+  return pointX < 100 - TOOLTIP_EDGE_THRESHOLD ? "left" : "right";
 }
 
 type FlagWithTooltipProps = {
@@ -632,33 +632,6 @@ export function CirclePoints({
       <div className="circle-points__trophy" aria-hidden="true">
         <img src="/img/trophy-lm.png" alt="" />
       </div>
-      <svg
-        className="circle-points__second-ring-dots"
-        viewBox="0 0 100 100"
-        aria-hidden="true"
-      >
-        {secondRing.map((point, index) => {
-          const pairIndex = getPairIndex(index);
-          const ringPairKey = pairKey(0, pairIndex);
-          const isPassed = passedPairs.has(ringPairKey);
-          const isAdvancing = advancingPairs.has(ringPairKey);
-
-          return (
-            <circle
-              key={`second-ring-dot-${index}`}
-              className={[
-                isPassed ? "circle-points__second-ring-dot--passed" : "",
-                isAdvancing ? "circle-points__second-ring-dot--advancing" : "",
-              ]
-                .filter(Boolean)
-                .join(" ")}
-              cx={point.x}
-              cy={point.y}
-              r={0.35}
-            />
-          );
-        })}
-      </svg>
       {rings.map((ring) => (
         <div key={ring.ringIndex} className={getRingClassName(ring.ringIndex)}>
           {ring.points.map((point, slotIndex) =>

@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { CirclePoints, type DrawPosition } from "./components/CirclePoints";
 import { parseDrawState, serializeDrawState } from "./lib/drawState";
+import { uploadDrawState } from "./lib/shareDraw";
 import { DEFAULT_DRAW_STATE } from "./lib/default-state";
 import type { Team } from "./lib/drawTree";
 import "./App.css";
@@ -75,8 +76,10 @@ function App() {
   const [debugDraft, setDebugDraft] = useState("");
   const [debugMessage, setDebugMessage] = useState<string | null>(null);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [shareLink, setShareLink] = useState<string | null>(null);
+  const [shareError, setShareError] = useState<string | null>(null);
+  const [isSharing, setIsSharing] = useState(false);
 
-  const shareLink = "https://fwc26draw.example/share/stub-link";
   const hasChanges = Object.keys(pairWinners).length > 0;
 
   const handleCopyState = useCallback(async () => {
@@ -118,26 +121,70 @@ function App() {
     setDebugMessage("Draw reset.");
   }, [handleReset]);
 
+  const handleShare = useCallback(async () => {
+    setShowShareModal(true);
+    setShareLink(null);
+    setShareError(null);
+    setIsSharing(true);
+
+    try {
+      const id = await uploadDrawState(serializeDrawState(pairWinners));
+      const url = new URL(window.location.href);
+      url.search = "";
+      url.searchParams.set("share", id);
+      setShareLink(url.toString());
+    } catch (error) {
+      setShareError(
+        error instanceof Error ? error.message : "Failed to share draw.",
+      );
+    } finally {
+      setIsSharing(false);
+    }
+  }, [pairWinners]);
+
+  const closeShareModal = useCallback(() => {
+    setShowShareModal(false);
+    setShareLink(null);
+    setShareError(null);
+  }, []);
+
   return (
     <main className="app">
       <aside className="app-sidebar">
         <h1 className="app-sidebar__title">World Cup 2026 Knockout Phase</h1>
         <p className="app-sidebar__text">
-          Unofficial visualization based on the original tweet.
+          Interactive visualization based on the{" "}
+          <a
+            target="_blank"
+            href="https://x.com/mkobach/status/2071353471295430705"
+            rel="noopener noreferrer"
+          >
+            original design
+          </a>{" "}
+          posted here.
         </p>
+        <p className="app-sidebar__text">
+          <a href="https://x.com/paul__ux">@paul__ux</a>
+        </p>
+
         <div className="app-sidebar__actions">
           <button
             type="button"
             className="app-action-btn"
-            disabled={!hasChanges}
-            onClick={() => setShowShareModal(true)}
+            disabled={!hasChanges || isSharing}
+            onClick={handleShare}
           >
             Share
           </button>
-          <button type="button" className="app-action-btn" onClick={handleReset}>
+          <button
+            type="button"
+            className="app-action-btn"
+            onClick={handleReset}
+          >
             Reset
           </button>
         </div>
+
         {showDebugPanel && (
           <section className="app-sidebar__debug" aria-label="Debug panel">
             <h2 className="app-sidebar__debug-title">Debug</h2>
@@ -186,7 +233,7 @@ function App() {
         <div
           className="app-share-modal"
           role="presentation"
-          onClick={() => setShowShareModal(false)}
+          onClick={closeShareModal}
         >
           <div
             className="app-share-modal__panel"
@@ -198,11 +245,21 @@ function App() {
             <h2 id="share-modal-title" className="app-share-modal__title">
               Share
             </h2>
-            <p className="app-share-modal__link">{shareLink}</p>
+            {isSharing ? (
+              <p className="app-share-modal__status" role="status">
+                Uploading…
+              </p>
+            ) : shareError ? (
+              <p className="app-share-modal__error" role="alert">
+                {shareError}
+              </p>
+            ) : shareLink ? (
+              <p className="app-share-modal__link">{shareLink}</p>
+            ) : null}
             <button
               type="button"
               className="app-action-btn"
-              onClick={() => setShowShareModal(false)}
+              onClick={closeShareModal}
             >
               Close
             </button>

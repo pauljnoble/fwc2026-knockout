@@ -19,3 +19,7 @@ body {
   color: #111;
   background-color: var(--bg);
 }
+
+a {
+  color: inherit;
+}
