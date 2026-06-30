@@ -4,6 +4,7 @@ export const DEFAULT_DRAW_STATE: DrawState = {
   "v": 1,
   "winners": {
     "0-pair-0": "BRA",
+    "0-pair-12": "MAR",
     "0-pair-13": "CAN",
     "0-pair-15": "PRY"
   }
