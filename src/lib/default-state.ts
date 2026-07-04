@@ -10,6 +10,7 @@ export const DEFAULT_DRAW_STATE: DrawState = {
     "0-pair-4": "ARG",
     "0-pair-5": "EGY",
     "0-pair-6": "CHE",
+    "0-pair-7": "COL",
     "0-pair-8": "BEL",
     "0-pair-9": "USA",
     "0-pair-10": "ESP",
@@ -17,6 +18,7 @@ export const DEFAULT_DRAW_STATE: DrawState = {
     "0-pair-12": "MAR",
     "0-pair-13": "CAN",
     "0-pair-14": "FRA",
-    "0-pair-15": "PRY"
+    "0-pair-15": "PRY",
+    "2-pair-6": "MAR"
   }
 }
