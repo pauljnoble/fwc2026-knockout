@@ -41,55 +41,55 @@ export type AdvanceMove = {
   targetSlotKey: string;
 };
 
-const TEAMS = [
-  { isoCode: "BRA", name: "Brazil" },
-  { isoCode: "JPN", name: "Japan" },
+// const TEAMS = [
+//   { isoCode: "BRA", name: "Brazil" },
+//   { isoCode: "JPN", name: "Japan" },
 
-  { isoCode: "CIV", name: "Côte d'Ivoire" },
-  { isoCode: "NOR", name: "Norway" },
+//   { isoCode: "CIV", name: "Côte d'Ivoire" },
+//   { isoCode: "NOR", name: "Norway" },
 
-  { isoCode: "MEX", name: "Mexico" },
-  { isoCode: "ECU", name: "Ecuador" },
+//   { isoCode: "MEX", name: "Mexico" },
+//   { isoCode: "ECU", name: "Ecuador" },
 
-  { isoCode: "GB-ENG", name: "England" },
-  { isoCode: "COD", name: "DR Congo" },
+//   { isoCode: "GB-ENG", name: "England" },
+//   { isoCode: "COD", name: "DR Congo" },
 
-  { isoCode: "ARG", name: "Argentina" },
-  { isoCode: "CPV", name: "Cape Verde" },
+//   { isoCode: "ARG", name: "Argentina" },
+//   { isoCode: "CPV", name: "Cape Verde" },
 
-  { isoCode: "AUS", name: "Australia" },
-  { isoCode: "EGY", name: "Egypt" },
+//   { isoCode: "AUS", name: "Australia" },
+//   { isoCode: "EGY", name: "Egypt" },
 
-  { isoCode: "CHE", name: "Switzerland" },
-  { isoCode: "DZA", name: "Algeria" },
+//   { isoCode: "CHE", name: "Switzerland" },
+//   { isoCode: "DZA", name: "Algeria" },
 
-  { isoCode: "COL", name: "Colombia" },
-  { isoCode: "GHA", name: "Ghana" },
+//   { isoCode: "COL", name: "Colombia" },
+//   { isoCode: "GHA", name: "Ghana" },
 
-  { isoCode: "SEN", name: "Senegal" },
-  { isoCode: "BEL", name: "Belgium" },
+//   { isoCode: "SEN", name: "Senegal" },
+//   { isoCode: "BEL", name: "Belgium" },
 
-  { isoCode: "USA", name: "United States" },
-  { isoCode: "BIH", name: "Bosnia and Herzegovina" },
+//   { isoCode: "USA", name: "United States" },
+//   { isoCode: "BIH", name: "Bosnia and Herzegovina" },
 
-  { isoCode: "ESP", name: "Spain" },
-  { isoCode: "AUT", name: "Austria" },
+//   { isoCode: "ESP", name: "Spain" },
+//   { isoCode: "AUT", name: "Austria" },
 
-  { isoCode: "PRT", name: "Portugal" },
-  { isoCode: "HRV", name: "Croatia" },
+//   { isoCode: "PRT", name: "Portugal" },
+//   { isoCode: "HRV", name: "Croatia" },
 
-  { isoCode: "NLD", name: "Netherlands" },
-  { isoCode: "MAR", name: "Morocco" },
+//   { isoCode: "NLD", name: "Netherlands" },
+//   { isoCode: "MAR", name: "Morocco" },
 
-  { isoCode: "CAN", name: "Canada" },
-  { isoCode: "ZAF", name: "South Africa" },
+//   { isoCode: "CAN", name: "Canada" },
+//   { isoCode: "ZAF", name: "South Africa" },
 
-  { isoCode: "FRA", name: "France" },
-  { isoCode: "SWE", name: "Sweden" },
+//   { isoCode: "FRA", name: "France" },
+//   { isoCode: "SWE", name: "Sweden" },
 
-  { isoCode: "DEU", name: "Germany" },
-  { isoCode: "PRY", name: "Paraguay" },
-] as const;
+//   { isoCode: "DEU", name: "Germany" },
+//   { isoCode: "PRY", name: "Paraguay" },
+// ] as const;
 
 function getInitialPairWinners(
   state: DrawState,
