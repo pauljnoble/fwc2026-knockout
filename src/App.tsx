@@ -4,17 +4,13 @@ import {
   type DrawPosition,
   type Point,
 } from "./components/CirclePoints";
-import {
-  parseDrawState,
-  serializeDrawState,
-  type DrawState,
-} from "./lib/drawState";
+import { parseDrawState, serializeDrawState } from "./lib/drawState";
 import {
   getShareIdFromUrl,
   loadDrawState,
   uploadDrawState,
 } from "./lib/shareDraw";
-import { DEFAULT_DRAW_STATE } from "./lib/default-state";
+import { fetchLiveDrawState } from "./lib/live-draw-state";
 import {
   getPairIndex,
   isPlayableRing,
@@ -24,21 +20,6 @@ import {
 } from "./lib/drawTree";
 import "./App.css";
 
-const WORLD_CUP_26_BASE_PATH = "https://worldcup26.ir";
-
-type Teams = {
-  _id: string;
-  name_en: string;
-  fifa_code: string;
-};
-
-type Games = {
-  _id: string;
-  type: string;
-  home_team_name_en: string;
-  away_team_name_en: string;
-};
-
 export type AdvanceMove = {
   id: string;
   team: Team;
@@ -47,69 +28,6 @@ export type AdvanceMove = {
   sourceSlotKey: string;
   targetSlotKey: string;
 };
-
-// const TEAMS = [
-//   { isoCode: "BRA", name: "Brazil" },
-//   { isoCode: "JPN", name: "Japan" },
-
-//   { isoCode: "CIV", name: "Côte d'Ivoire" },
-//   { isoCode: "NOR", name: "Norway" },
-
-//   { isoCode: "MEX", name: "Mexico" },
-//   { isoCode: "ECU", name: "Ecuador" },
-
-//   { isoCode: "GB-ENG", name: "England" },
-//   { isoCode: "COD", name: "DR Congo" },
-
-//   { isoCode: "ARG", name: "Argentina" },
-//   { isoCode: "CPV", name: "Cape Verde" },
-
-//   { isoCode: "AUS", name: "Australia" },
-//   { isoCode: "EGY", name: "Egypt" },
-
-//   { isoCode: "CHE", name: "Switzerland" },
-//   { isoCode: "DZA", name: "Algeria" },
-
-//   { isoCode: "COL", name: "Colombia" },
-//   { isoCode: "GHA", name: "Ghana" },
-
-//   { isoCode: "SEN", name: "Senegal" },
-//   { isoCode: "BEL", name: "Belgium" },
-
-//   { isoCode: "USA", name: "United States" },
-//   { isoCode: "BIH", name: "Bosnia and Herzegovina" },
-
-//   { isoCode: "ESP", name: "Spain" },
-//   { isoCode: "AUT", name: "Austria" },
-
-//   { isoCode: "PRT", name: "Portugal" },
-//   { isoCode: "HRV", name: "Croatia" },
-
-//   { isoCode: "NLD", name: "Netherlands" },
-//   { isoCode: "MAR", name: "Morocco" },
-
-//   { isoCode: "CAN", name: "Canada" },
-//   { isoCode: "ZAF", name: "South Africa" },
-
-//   { isoCode: "FRA", name: "France" },
-//   { isoCode: "SWE", name: "Sweden" },
-
-//   { isoCode: "DEU", name: "Germany" },
-//   { isoCode: "PRY", name: "Paraguay" },
-// ] as const;
-
-function getInitialPairWinners(
-  state: DrawState,
-  positions: DrawPosition[] | null,
-): Record<string, Team> {
-  const result = parseDrawState(JSON.stringify(state), positions);
-
-  if ("error" in result) {
-    throw new Error(result.error);
-  }
-
-  return result.pairWinners;
-}
 
 function isDebugEnabled(): boolean {
   return new URLSearchParams(window.location.search).get("debug") === "1";
@@ -143,72 +61,23 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const [teamsResponse, gamesResponse] = await Promise.all([
-          fetch(`${WORLD_CUP_26_BASE_PATH}/get/teams`),
-          fetch(`${WORLD_CUP_26_BASE_PATH}/get/games`),
-        ]);
+        const { state, positions } = await fetchLiveDrawState();
+        drawPositionsRef.current = positions;
+        const result = parseDrawState(JSON.stringify(state), positions);
 
-        if (!teamsResponse.ok || !gamesResponse.ok) {
-          console.error("Error fetching data");
+        if ("error" in result) {
+          console.error(result.error);
           return;
         }
 
-        const [teamsData, gamesData] = await Promise.all([
-          teamsResponse.json(),
-          gamesResponse.json(),
-        ]);
-
-        const teamsMap = teamsData.teams.reduce(
-          (acc: { [key: string]: string }, { fifa_code, name_en }: Teams) => {
-            acc[name_en] = fifa_code;
-            return acc;
-          },
-          {},
-        );
-
-        // r32 filter
-        const r32GameTeams = gamesData?.games
-          .filter(({ type }: Games) => type === "r32")
-          .reduce(
-            (acc: any, { home_team_name_en, away_team_name_en }: Games) => {
-              acc.push({
-                isoCode: teamsMap[home_team_name_en],
-                name: home_team_name_en,
-              });
-              acc.push({
-                isoCode: teamsMap[away_team_name_en],
-                name: away_team_name_en,
-              });
-              return acc;
-            },
-            [],
-          );
-        console.log({ r32GameTeams });
-
-        drawPositionsRef.current = r32GameTeams.map(
-          (team: { isoCode: string; name: string }, index: number) => {
-            const position = index + 1;
-
-            return {
-              position,
-              pair: Math.ceil(position / 2),
-              isoCode: team.isoCode,
-              team: team.name,
-            };
-          },
-        );
-
-        basePairWinnersRef.current = getInitialPairWinners(
-          DEFAULT_DRAW_STATE,
-          drawPositionsRef.current,
-        );
+        basePairWinnersRef.current = result.pairWinners;
         setPairWinners(shareId ? {} : basePairWinnersRef.current);
       } catch (e) {
         console.error(e);
       }
     };
     fetchData();
-  }, []);
+  }, [shareId]);
 
   useEffect(() => {
     if (!shareId) {
