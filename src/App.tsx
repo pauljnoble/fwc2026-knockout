@@ -6,6 +6,7 @@ import {
   loadDrawState,
   uploadDrawState,
 } from "./lib/shareDraw";
+import { loadLiveDrawResult } from "./lib/liveResults";
 import { DEFAULT_DRAW_STATE } from "./lib/default-state";
 import type { Team } from "./lib/drawTree";
 import "./App.css";
@@ -71,6 +72,8 @@ const DRAW_POSITIONS: DrawPosition[] = TEAMS.map((team, index) => {
   };
 });
 
+const LIVE_RESULTS_REFRESH_MS = 60_000;
+
 function getInitialPairWinners(): Record<string, Team> {
   const result = parseDrawState(
     JSON.stringify(DEFAULT_DRAW_STATE),
@@ -104,8 +107,50 @@ function App() {
   const [isLoadingShare, setIsLoadingShare] = useState(Boolean(shareId));
   const [shareLoadError, setShareLoadError] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [isSyncingLiveResults, setIsSyncingLiveResults] = useState(!shareId);
+  const [liveResultsStatus, setLiveResultsStatus] = useState<string | null>(
+    shareId ? "Shared draw loaded from link." : "Syncing current results...",
+  );
 
   const hasChanges = Object.keys(pairWinners).length > 0;
+
+  const syncLiveResults = useCallback(
+    async (signal?: AbortSignal) => {
+      if (shareId) {
+        return;
+      }
+
+      setIsSyncingLiveResults(true);
+
+      try {
+        const result = await loadLiveDrawResult(DRAW_POSITIONS, signal);
+
+        setPairWinners(result.pairWinners);
+        setDrawKey((current) => current + 1);
+        setLiveResultsStatus(
+          `Live API synced ${result.appliedMatchCount} finished knockout matches at ${result.fetchedAt.toLocaleTimeString([], {
+            hour: "numeric",
+            minute: "2-digit",
+          })}.`,
+        );
+      } catch (error) {
+        if (signal?.aborted) {
+          return;
+        }
+
+        setLiveResultsStatus(
+          error instanceof Error
+            ? `Live API unavailable: ${error.message}`
+            : "Live API unavailable.",
+        );
+      } finally {
+        if (!signal?.aborted) {
+          setIsSyncingLiveResults(false);
+        }
+      }
+    },
+    [shareId],
+  );
 
   useEffect(() => {
     if (!shareId) {
@@ -149,6 +194,24 @@ function App() {
       cancelled = true;
     };
   }, [shareId]);
+
+  useEffect(() => {
+    if (shareId) {
+      return;
+    }
+
+    const controller = new AbortController();
+    void syncLiveResults(controller.signal);
+
+    const intervalId = window.setInterval(() => {
+      void syncLiveResults();
+    }, LIVE_RESULTS_REFRESH_MS);
+
+    return () => {
+      controller.abort();
+      window.clearInterval(intervalId);
+    };
+  }, [shareId, syncLiveResults]);
 
   const handleCopyState = useCallback(async () => {
     const serialized = serializeDrawState(pairWinners);
@@ -248,6 +311,16 @@ function App() {
         </p>
 
         <div className="app-sidebar__actions">
+          {!shareId ? (
+            <button
+              type="button"
+              className="app-action-btn"
+              disabled={isSyncingLiveResults}
+              onClick={() => void syncLiveResults()}
+            >
+              {isSyncingLiveResults ? "Syncing" : "Sync API"}
+            </button>
+          ) : null}
           <button
             type="button"
             className="app-action-btn"
@@ -264,6 +337,19 @@ function App() {
             Reset
           </button>
         </div>
+
+        {liveResultsStatus ? (
+          <p
+            className={`app-sidebar__live-message${
+              liveResultsStatus.startsWith("Live API unavailable")
+                ? " app-sidebar__live-message--error"
+                : ""
+            }`}
+            role="status"
+          >
+            {liveResultsStatus}
+          </p>
+        ) : null}
 
         {isLoadingShare ? (
           <p className="app-sidebar__share-message" role="status">
