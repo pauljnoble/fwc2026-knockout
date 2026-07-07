@@ -7,6 +7,7 @@ type AdvanceAnimatorProps = {
   sourceSlotKey: string
   pathD: string
   startPosition: PathPoint
+  reverse?: boolean
   onPositionChange: (sourceSlotKey: string, position: PathPoint | null) => void
   onComplete: () => void
 }
@@ -15,6 +16,7 @@ export function AdvanceAnimator({
   sourceSlotKey,
   pathD,
   startPosition,
+  reverse = false,
   onPositionChange,
   onComplete,
 }: AdvanceAnimatorProps) {
@@ -31,7 +33,10 @@ export function AdvanceAnimator({
       return
     }
 
-    onPositionChangeRef.current(sourceSlotKey, getPointOnPath(pathElement, 0))
+    onPositionChangeRef.current(
+      sourceSlotKey,
+      getPointOnPath(pathElement, reverse ? 1 : 0),
+    )
 
     let frameId = 0
     const startedAt = performance.now()
@@ -44,7 +49,8 @@ export function AdvanceAnimator({
 
       const elapsed = now - startedAt
       const linearProgress = Math.min(elapsed / ADVANCE_DURATION_MS, 1)
-      const progress = easeInOutCubic(linearProgress)
+      const easedProgress = easeInOutCubic(linearProgress)
+      const progress = reverse ? 1 - easedProgress : easedProgress
 
       onPositionChangeRef.current(
         sourceSlotKey,

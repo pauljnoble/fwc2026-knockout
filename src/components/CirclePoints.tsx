@@ -29,6 +29,7 @@ import { useHoverIntent } from "../hooks/useHoverIntent";
 import { TeamFlag } from "./TeamFlag";
 import { AdvanceAnimator } from "./TravelingTeam";
 import "./CirclePoints.css";
+import type { AdvanceMove } from "../App";
 
 export type { DrawPosition } from "../lib/drawTree";
 
@@ -39,18 +40,16 @@ type CirclePointsProps = {
   positions: DrawPosition[];
   pairWinners: Record<string, Team>;
   onPairWinnersChange: (pairWinners: Record<string, Team>) => void;
+  onMoveCreated: (move: AdvanceMove) => void;
+  reverseMove?: AdvancingTeam | null;
+  onReverseMoveComplete?: () => void;
 };
 
-type AdvancingTeam = {
-  id: string;
-  team: Team;
-  pathD: string;
-  startPosition: Point;
-  sourceSlotKey: string;
-  targetSlotKey: string;
+type AdvancingTeam = AdvanceMove & {
+  reverse?: boolean;
 };
 
-type Point = {
+export type Point = {
   id: string;
   x: number;
   y: number;
@@ -320,6 +319,9 @@ export function CirclePoints({
   positions,
   pairWinners,
   onPairWinnersChange,
+  onMoveCreated,
+  reverseMove,
+  onReverseMoveComplete,
 }: CirclePointsProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [ringRadiusOffset, setRingRadiusOffset] = useState(0);
@@ -412,6 +414,29 @@ export function CirclePoints({
       ),
     );
   }, [slotTeams]);
+
+  useLayoutEffect(() => {
+    if (!reverseMove) {
+      return;
+    }
+
+    setAdvancingTeams((current) => [
+      ...current.filter(
+        (advance) =>
+          advance.sourceSlotKey !== reverseMove.sourceSlotKey &&
+          advance.targetSlotKey !== reverseMove.targetSlotKey,
+      ),
+      {
+        id: reverseMove.id,
+        team: reverseMove.team,
+        pathD: reverseMove.pathD,
+        startPosition: reverseMove.startPosition,
+        sourceSlotKey: reverseMove.sourceSlotKey,
+        targetSlotKey: reverseMove.targetSlotKey,
+        reverse: true,
+      },
+    ]);
+  }, [reverseMove]);
 
   const firstRing = rings[0].points;
   const secondRing = rings[1].points;
@@ -539,8 +564,18 @@ export function CirclePoints({
         startPosition,
         sourceSlotKey,
         targetSlotKey,
+        reverse: false,
       },
     ]);
+
+    onMoveCreated({
+      id: `${targetSlotKey}-${team.isoCode}-${Date.now()}`,
+      team,
+      pathD,
+      startPosition,
+      sourceSlotKey,
+      targetSlotKey,
+    });
   }
 
   function renderPoint(ringIndex: number, point: Point, slotIndex: number) {
@@ -833,8 +868,14 @@ export function CirclePoints({
             sourceSlotKey={advance.sourceSlotKey}
             pathD={advance.pathD}
             startPosition={advance.startPosition}
+            reverse={advance.reverse}
             onPositionChange={handleTravelPositionChange}
-            onComplete={() => handleAdvanceComplete(advance.id)}
+            onComplete={() => {
+              handleAdvanceComplete(advance.id);
+              if (advance.reverse) {
+                onReverseMoveComplete?.();
+              }
+            }}
           />
         ))}
       </div>

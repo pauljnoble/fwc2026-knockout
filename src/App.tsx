@@ -1,5 +1,9 @@
-import { useCallback, useEffect, useState } from "react";
-import { CirclePoints, type DrawPosition } from "./components/CirclePoints";
+import { useCallback, useEffect, useRef, useState } from "react";
+import {
+  CirclePoints,
+  type DrawPosition,
+  type Point,
+} from "./components/CirclePoints";
 import { parseDrawState, serializeDrawState } from "./lib/drawState";
 import {
   getShareIdFromUrl,
@@ -7,8 +11,23 @@ import {
   uploadDrawState,
 } from "./lib/shareDraw";
 import { DEFAULT_DRAW_STATE } from "./lib/default-state";
-import type { Team } from "./lib/drawTree";
+import {
+  getPairIndex,
+  isPlayableRing,
+  selectPairWinner,
+  type PlayableRing,
+  type Team,
+} from "./lib/drawTree";
 import "./App.css";
+
+export type AdvanceMove = {
+  id: string;
+  team: Team;
+  pathD: string;
+  startPosition: Point;
+  sourceSlotKey: string;
+  targetSlotKey: string;
+};
 
 const TEAMS = [
   { isoCode: "BRA", name: "Brazil" },
@@ -104,8 +123,17 @@ function App() {
   const [isLoadingShare, setIsLoadingShare] = useState(Boolean(shareId));
   const [shareLoadError, setShareLoadError] = useState<string | null>(null);
   const [shareCopied, setShareCopied] = useState(false);
+  const [activeUndoMove, setActiveUndoMove] = useState<AdvanceMove | null>(
+    null,
+  );
+  const moveHistoryRef = useRef<AdvanceMove[]>([]);
+  const basePairWinnersRef = useRef<Record<string, Team>>(
+    getInitialPairWinners(),
+  );
 
   const hasChanges = Object.keys(pairWinners).length > 0;
+  const canUndo = Boolean(moveHistoryRef.current.length > 0);
+  const isUndoAnimating = activeUndoMove !== null;
 
   useEffect(() => {
     if (!shareId) {
@@ -129,7 +157,10 @@ function App() {
         }
 
         setPairWinners(result.pairWinners);
+        basePairWinnersRef.current = result.pairWinners;
         setDrawKey((current) => current + 1);
+        moveHistoryRef.current = [];
+        setActiveUndoMove(null);
       } catch (error) {
         if (!cancelled) {
           setShareLoadError(
@@ -172,16 +203,22 @@ function App() {
     }
 
     setPairWinners(result.pairWinners);
+    basePairWinnersRef.current = result.pairWinners;
     setDrawKey((current) => current + 1);
+    moveHistoryRef.current = [];
+    setActiveUndoMove(null);
     setDebugMessage("State loaded.");
   }, [debugDraft]);
 
   const handleReset = useCallback(() => {
     setPairWinners({});
+    basePairWinnersRef.current = {};
     setDrawKey((current) => current + 1);
     setDebugDraft("");
     setDebugMessage(null);
     setShowShareModal(false);
+    moveHistoryRef.current = [];
+    setActiveUndoMove(null);
   }, []);
 
   const handleResetState = useCallback(() => {
@@ -218,6 +255,53 @@ function App() {
     setShareCopied(false);
   }, []);
 
+  const handleUndo = useCallback(() => {
+    if (activeUndoMove) {
+      return;
+    }
+
+    const latestMove = moveHistoryRef.current.pop();
+    if (!latestMove) {
+      return;
+    }
+
+    setActiveUndoMove(latestMove);
+  }, [activeUndoMove]);
+
+  const handleReverseMoveComplete = useCallback(() => {
+    if (!activeUndoMove) {
+      return;
+    }
+
+    const nextState = moveHistoryRef.current.reduce((current, move) => {
+      const match = move.sourceSlotKey.match(/^(\d+)-(\d+)$/);
+      if (!match) {
+        return current;
+      }
+
+      const ringIndex = Number(match[1]);
+      const slotIndex = Number(match[2]);
+      if (!isPlayableRing(ringIndex)) {
+        return current;
+      }
+
+      return selectPairWinner(
+        DRAW_POSITIONS,
+        current,
+        ringIndex as PlayableRing,
+        getPairIndex(slotIndex),
+        move.team,
+      );
+    }, basePairWinnersRef.current);
+
+    setPairWinners(nextState);
+    setActiveUndoMove(null);
+  }, [activeUndoMove]);
+
+  const handleMoveCreated = useCallback((move: AdvanceMove) => {
+    moveHistoryRef.current.push(move);
+  }, []);
+
   const handleCopyShareLink = useCallback(async () => {
     if (!shareLink) {
       return;
@@ -248,6 +332,14 @@ function App() {
         </p>
 
         <div className="app-sidebar__actions">
+          <button
+            type="button"
+            className="app-action-btn"
+            disabled={!canUndo || isSharing || isUndoAnimating}
+            onClick={handleUndo}
+          >
+            Undo
+          </button>
           <button
             type="button"
             className="app-action-btn"
@@ -330,6 +422,9 @@ function App() {
             positions={DRAW_POSITIONS}
             pairWinners={pairWinners}
             onPairWinnersChange={setPairWinners}
+            onMoveCreated={handleMoveCreated}
+            reverseMove={activeUndoMove}
+            onReverseMoveComplete={handleReverseMoveComplete}
           />
         )}
       </div>
