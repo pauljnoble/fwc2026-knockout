@@ -13,6 +13,7 @@ import {
 import { fetchLiveDrawState } from "./lib/live-draw-state";
 import {
   getPairIndex,
+  getPairWinner,
   isPlayableRing,
   selectPairWinner,
   type PlayableRing,
@@ -53,16 +54,31 @@ function App() {
   const moveHistoryRef = useRef<AdvanceMove[]>([]);
   const basePairWinnersRef = useRef<Record<string, Team> | null>(null);
   const drawPositionsRef = useRef<DrawPosition[] | null>(null);
+  const beatByScoresRef = useRef<Record<string, string>>({});
+  const lastChampionshipWinnerIsoRef = useRef<string | null>(null);
+  const [confettiKey, setConfettiKey] = useState(0);
 
   const hasChanges = pairWinners ? Object.keys(pairWinners).length > 0 : false;
   const canUndo = Boolean(moveHistoryRef.current.length > 0);
   const isUndoAnimating = activeUndoMove !== null;
+  const championshipWinner = getPairWinner(5, 0, pairWinners);
+
+  useEffect(() => {
+    const nextWinnerIso = championshipWinner?.isoCode ?? null;
+
+    if (nextWinnerIso && nextWinnerIso !== lastChampionshipWinnerIsoRef.current) {
+      setConfettiKey((current) => current + 1);
+    }
+
+    lastChampionshipWinnerIsoRef.current = nextWinnerIso;
+  }, [championshipWinner]);
 
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { state, positions } = await fetchLiveDrawState();
+        const { state, positions, beatByScores } = await fetchLiveDrawState();
         drawPositionsRef.current = positions;
+        beatByScoresRef.current = beatByScores;
         const result = parseDrawState(JSON.stringify(state), positions);
 
         if ("error" in result) {
@@ -163,6 +179,7 @@ function App() {
           : {},
     );
     basePairWinnersRef.current = {};
+    lastChampionshipWinnerIsoRef.current = null;
     setDrawKey((current) => current + 1);
     setDebugDraft("");
     setDebugMessage(null);
@@ -362,15 +379,18 @@ function App() {
             Loading shared draw
           </p>
         ) : (
-          <CirclePoints
-            key={drawKey}
-            positions={drawPositionsRef.current}
-            pairWinners={pairWinners}
-            onPairWinnersChange={setPairWinners}
-            onMoveCreated={handleMoveCreated}
-            reverseMove={activeUndoMove}
-            onReverseMoveComplete={handleReverseMoveComplete}
-          />
+        <CirclePoints
+          key={drawKey}
+          positions={drawPositionsRef.current}
+          pairWinners={pairWinners}
+          beatByScores={beatByScoresRef.current}
+          championshipWinner={championshipWinner}
+          confettiKey={confettiKey}
+          onPairWinnersChange={setPairWinners}
+          onMoveCreated={handleMoveCreated}
+          reverseMove={activeUndoMove}
+        onReverseMoveComplete={handleReverseMoveComplete}
+      />
         )}
       </div>
       {showShareModal ? (

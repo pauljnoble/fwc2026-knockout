@@ -33,6 +33,73 @@
   user-select: none;
 }
 
+.circle-points__champion {
+  position: absolute;
+  left: 50%;
+  top: calc(50% - 4.8rem);
+  z-index: 12;
+  max-width: min(22rem, 72vw);
+  padding: 0.45rem 0.8rem;
+  border: 1px solid rgb(255 255 255 / 0.2);
+  border-radius: 999px;
+  background: rgb(15 15 15 / 0.82);
+  box-shadow: 0 10px 30px rgb(0 0 0 / 0.16);
+  color: #fff;
+  font-family:
+    system-ui,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
+  font-size: 0.92rem;
+  font-weight: 650;
+  line-height: 1;
+  letter-spacing: -0.01em;
+  text-align: center;
+  transform: translateX(-50%);
+  pointer-events: none;
+}
+
+.circle-points__confetti-layer {
+  position: absolute;
+  inset: 0;
+  z-index: 11;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.circle-points__confetti {
+  position: absolute;
+  top: calc(50% - 6rem);
+  width: 0.5rem;
+  height: 1rem;
+  border-radius: 999px;
+  background: hsl(var(--confetti-hue) 90% 55%);
+  box-shadow: 0 0 0.35rem rgb(255 255 255 / 0.35);
+  opacity: 0;
+  transform: translate(0, -12rem) rotate(0deg);
+  animation-name: confetti-fall;
+  animation-timing-function: ease-out;
+  animation-fill-mode: forwards;
+}
+
+@keyframes confetti-fall {
+  0% {
+    opacity: 0;
+    transform: translate(0, -12rem) rotate(0deg) scale(0.8);
+  }
+
+  12% {
+    opacity: 1;
+  }
+
+  100% {
+    opacity: 0;
+    transform: translate(var(--confetti-drift), 20rem)
+      rotate(var(--confetti-spin)) scale(1);
+  }
+}
+
 .circle-points__trophy img {
   width: 40px;
   height: auto;
