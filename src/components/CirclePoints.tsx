@@ -39,6 +39,7 @@ const OUTER_RING_DIAMETER_EXPANSION_PX = 8;
 type CirclePointsProps = {
   positions: DrawPosition[] | null;
   pairWinners: Record<string, Team>;
+  beatByScores?: Record<string, string>;
   onPairWinnersChange: (pairWinners: Record<string, Team>) => void;
   onMoveCreated: (move: AdvanceMove) => void;
   reverseMove?: AdvancingTeam | null;
@@ -167,6 +168,7 @@ type FlagWithTooltipProps = {
   side: "left" | "right";
   inactive?: boolean;
   beatBy?: Team | null;
+  beatByScore?: string;
 };
 
 function FlagWithTooltip({
@@ -174,6 +176,7 @@ function FlagWithTooltip({
   side,
   inactive = false,
   beatBy,
+  beatByScore = "",
 }: FlagWithTooltipProps) {
   const anchorRef = useRef<HTMLSpanElement>(null);
   const [focusedVisible, setFocusedVisible] = useState(false);
@@ -187,7 +190,7 @@ function FlagWithTooltip({
     hideImmediately,
   } = useHoverIntent();
   const tooltipText = beatBy
-    ? `${team.name} — lost to ${beatBy.name}`
+    ? `${team.name} — lost to ${beatBy.name}${beatByScore}`
     : team.name;
   const visible = hoverVisible || focusedVisible;
 
@@ -318,6 +321,7 @@ function getPairArcMidpoint(
 export function CirclePoints({
   positions,
   pairWinners,
+  beatByScores = {},
   onPairWinnersChange,
   onMoveCreated,
   reverseMove,
@@ -647,12 +651,16 @@ export function CirclePoints({
       teamState === "eliminated"
         ? getPairWinner(ringIndex as PlayableRing, pairIndex, pairWinners)
         : null;
+    const beatByScore = beatBy
+      ? beatByScores[pairKey(ringIndex, pairIndex)] ?? ""
+      : "";
     const flagElement = shouldRenderFlag ? (
       <FlagWithTooltip
         team={actualTeam}
         side={tooltipSide}
         inactive={teamState === "eliminated"}
         beatBy={beatBy}
+        beatByScore={beatByScore}
       />
     ) : null;
     const selectLabel = `Select ${actualTeam?.name ?? actualTeam?.isoCode}`;

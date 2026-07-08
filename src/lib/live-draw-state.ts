@@ -89,6 +89,7 @@ function getTeamFromGame(
 export async function fetchLiveDrawState(): Promise<{
   state: DrawState;
   positions: DrawPosition[];
+  beatByScores: Record<string, string>;
 }> {
   const [teamsResponse, gamesResponse] = await Promise.all([
     fetch(`${WORLD_CUP_26_BASE_PATH}/get/teams`),
@@ -117,8 +118,31 @@ export async function fetchLiveDrawState(): Promise<{
   );
 
   const winners: Record<string, string> = {};
+  const beatByScores: Record<string, string> = {};
   const positions: DrawPosition[] = [];
   let r32PairIndex = 0;
+
+  function getGameScore(game: GameRecord): string | null {
+    const homeScore = Number(game.home_score);
+    const awayScore = Number(game.away_score);
+
+    if (Number.isNaN(homeScore) || Number.isNaN(awayScore)) {
+      return null;
+    }
+
+    const baseScore = `(${homeScore}-${awayScore})`;
+    const hasPenaltyScore =
+      game.home_penalty_score &&
+      game.home_penalty_score !== "null" &&
+      game.away_penalty_score &&
+      game.away_penalty_score !== "null";
+
+    if (homeScore === awayScore && hasPenaltyScore) {
+      return `${baseScore}PK:${game.home_penalty_score}-${game.away_penalty_score}`;
+    }
+
+    return baseScore;
+  }
 
   for (const [type, ringIndex] of Object.entries(TYPE_TO_RING_INDEX)) {
     const games = gamesData.games.filter((game) => game.type === type);
@@ -147,12 +171,20 @@ export async function fetchLiveDrawState(): Promise<{
         const homeSourceWinner = getWinnerIsoCode(homeTeam ?? game, teamsMap);
         if (homeSourceWinner) {
           winners[`0-pair-${r32PairIndex}`] = homeSourceWinner;
+          const score = getGameScore(homeTeam ?? game);
+          if (score) {
+            beatByScores[`0-pair-${r32PairIndex}`] = score;
+          }
         }
         r32PairIndex += 1;
 
         const awaySourceWinner = getWinnerIsoCode(awayTeam ?? game, teamsMap);
         if (awaySourceWinner) {
           winners[`0-pair-${r32PairIndex}`] = awaySourceWinner;
+          const score = getGameScore(awayTeam ?? game);
+          if (score) {
+            beatByScores[`0-pair-${r32PairIndex}`] = score;
+          }
         }
         r32PairIndex += 1;
       }
@@ -163,11 +195,16 @@ export async function fetchLiveDrawState(): Promise<{
       }
 
       winners[`${ringIndex}-pair-${pairIndex}`] = winnerIsoCode;
+      const score = getGameScore(game);
+      if (score) {
+        beatByScores[`${ringIndex}-pair-${pairIndex}`] = score;
+      }
     });
   }
 
   return {
     state: { v: 1, winners },
     positions,
+    beatByScores,
   };
 }

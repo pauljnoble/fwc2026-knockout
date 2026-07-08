@@ -53,6 +53,7 @@ function App() {
   const moveHistoryRef = useRef<AdvanceMove[]>([]);
   const basePairWinnersRef = useRef<Record<string, Team> | null>(null);
   const drawPositionsRef = useRef<DrawPosition[] | null>(null);
+  const beatByScoresRef = useRef<Record<string, string>>({});
 
   const hasChanges = pairWinners ? Object.keys(pairWinners).length > 0 : false;
   const canUndo = Boolean(moveHistoryRef.current.length > 0);
@@ -61,8 +62,9 @@ function App() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const { state, positions } = await fetchLiveDrawState();
+        const { state, positions, beatByScores } = await fetchLiveDrawState();
         drawPositionsRef.current = positions;
+        beatByScoresRef.current = beatByScores;
         const result = parseDrawState(JSON.stringify(state), positions);
 
         if ("error" in result) {
@@ -362,15 +364,16 @@ function App() {
             Loading shared draw
           </p>
         ) : (
-          <CirclePoints
-            key={drawKey}
-            positions={drawPositionsRef.current}
-            pairWinners={pairWinners}
-            onPairWinnersChange={setPairWinners}
-            onMoveCreated={handleMoveCreated}
-            reverseMove={activeUndoMove}
-            onReverseMoveComplete={handleReverseMoveComplete}
-          />
+      <CirclePoints
+        key={drawKey}
+        positions={drawPositionsRef.current}
+        pairWinners={pairWinners}
+        beatByScores={beatByScoresRef.current}
+        onPairWinnersChange={setPairWinners}
+        onMoveCreated={handleMoveCreated}
+        reverseMove={activeUndoMove}
+        onReverseMoveComplete={handleReverseMoveComplete}
+      />
         )}
       </div>
       {showShareModal ? (
